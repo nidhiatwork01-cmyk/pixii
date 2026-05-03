@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 
 const STEPS = [
-  { label: "Connecting to Claude", detail: "Anthropic API — claude-3-haiku", engine: "claude" },
-  { label: "Querying Claude...", detail: "Awaiting response from Anthropic", engine: "claude" },
+  { label: "Connecting to Groq", detail: "Groq API — llama-3.3-70b-versatile", engine: "groq" },
+  { label: "Querying Llama 3...", detail: "Awaiting response from Groq", engine: "groq" },
   { label: "Connecting to Gemini", detail: "Google AI — gemini-1.5-flash", engine: "gemini" },
   { label: "Querying Gemini...", detail: "Awaiting response from Google", engine: "gemini" },
   { label: "Parsing results...", detail: "Extracting brand mentions & sentiment", engine: "parse" },
@@ -12,7 +12,7 @@ const STEPS = [
 ];
 
 const ENGINE_COLORS = {
-  claude: "text-amber-400",
+  groq: "text-amber-400",
   gemini: "text-sky-400",
   parse: "text-violet-400",
 };

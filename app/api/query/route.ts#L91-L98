@@ -1,0 +1,26 @@
+async function queryGemini(query: string): Promise<string> {
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY ?? "");
+    
+    try {
+        // Using the high-performance 2.5-pro for your new high-limit key
+        const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-pro" });
+        const result = await model.generateContent(`${SYSTEM_PROMPT}\n\nQuery: ${query}`);
+        const response = await result.response;
+        return response.text();
+    } catch (err: any) {
+        // High-Availability Fallback: Pivot to Groq if Gemini hits any limits or issues
+        if (err.status === 429 || err.message?.includes("429")) {
+            console.log("Gemini Rate Limited. Falling back to Groq-Llama-8b...");
+            const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+            const fallback = await groq.chat.completions.create({
+                model: "llama-3.1-8b-instant",
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: query },
+                ],
+            });
+            return fallback.choices[0]?.message?.content ?? "[]";
+        }
+        throw err;
+    }
+}

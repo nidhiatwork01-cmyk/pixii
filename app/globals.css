@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -5,134 +6,91 @@
 }
 
 :root {
-  --amber: #F5A623;
-  --amber-dim: rgba(245, 166, 35, 0.15);
-  --bg: #0A0A0A;
+  --bg-obsidian: #09090B;
+  --card-obsidian: #111116;
+  --silver-tint: rgba(255, 255, 255, 0.05);
+  --crisp-white: #FFFFFF;
+  --slate-gray: #94A3B8;
+  
+  --llama-indigo: #6366F1;
+  --gemini-cyan: #22D3EE;
+  --bsr-emerald: #10B981;
+  --alert-red: #EF4444;
+  --amber-brand: #F5A623;
 }
 
-/* ── Base ──────────────────────────────────────────────────────────────── */
-html,
 body {
-  background-color: var(--bg);
-  color: #e4e4e7;
-  min-height: 100vh;
+  background-color: var(--bg-obsidian);
+  color: var(--slate-gray);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ── Fraunces serif utility ─────────────────────────────────────────────── */
-.font-fraunces {
-  font-family: "Fraunces", Georgia, serif;
+.font-serif {
+  font-family: 'Lora', serif;
 }
 
-/* ── Scanline animation ─────────────────────────────────────────────────── */
-.scanline-anim {
+.font-sans {
+  font-family: 'DM Sans', sans-serif;
+}
+
+.bg-obsidian-mesh {
+  background-image: 
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 40%),
+    radial-gradient(at 0% 100%, rgba(34, 211, 238, 0.08) 0px, transparent 40%);
+}
+
+.tech-grid-silver {
+  background-size: 60px 60px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.obsidian-card {
+  background-color: var(--card-obsidian);
+  border: 1px solid var(--silver-tint);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.accent-bar {
+  height: 3px;
+  width: 100%;
   position: absolute;
-  top: -100%;
+  bottom: 0;
   left: 0;
-  right: 0;
-  height: 40%;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(245, 166, 35, 0.03) 40%,
-    rgba(245, 166, 35, 0.06) 50%,
-    rgba(245, 166, 35, 0.03) 60%,
-    transparent 100%
-  );
-  animation: scanline 4s linear infinite;
 }
 
-@keyframes scanline {
-  0% {
-    top: -40%;
-  }
-  100% {
-    top: 100%;
-  }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Ticker / live data shimmer ─────────────────────────────────────────── */
-.ticker-shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(245, 166, 35, 0.1) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2.5s ease-in-out infinite;
+.stagger-row {
+  animation: fadeInUp 0.4s ease forwards;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+/* Visibility Bar */
+.v-bar-track {
+  height: 6px;
+  background: #1E1E24;
+  border-radius: 99px;
+  overflow: hidden;
 }
 
-/* ── Amber glow pulse ───────────────────────────────────────────────────── */
-.amber-glow {
-  box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.4);
-  animation: amber-pulse 2s ease-out infinite;
+.v-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 1s ease-out;
 }
 
-@keyframes amber-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 12px rgba(245, 166, 35, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(245, 166, 35, 0);
-  }
+/* Ticker Animation */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
-/* ── Results scanline overlay ───────────────────────────────────────────── */
-.results-scan-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
-  );
-}
-
-/* ── Thin scrollbar ─────────────────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
-}
-
-/* ── Amber divider ──────────────────────────────────────────────────────── */
-.amber-divider {
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(245, 166, 35, 0.5) 20%,
-    rgba(245, 166, 35, 0.5) 80%,
-    transparent
-  );
-}
-
-/* ── Live ticker bar ────────────────────────────────────────────────────── */
 .ticker-bar {
   overflow: hidden;
   white-space: nowrap;
@@ -141,26 +99,9 @@ body {
 .ticker-inner {
   display: inline-flex;
   gap: 3rem;
-  animation: ticker-scroll 20s linear infinite;
+  animation: ticker-scroll 60s linear infinite;
 }
 
-@keyframes ticker-scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-/* ── Focus ring ─────────────────────────────────────────────────────────── */
-*:focus-visible {
-  outline: 2px solid var(--amber);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* ── Input placeholder ──────────────────────────────────────────────────── */
-input::placeholder {
-  color: #52525b;
+.ticker-inner:hover {
+  animation-play-state: paused;
 }

@@ -1,181 +1,113 @@
-"use client";
-
-import { ParsedResult } from "@/lib/parseResponse";
+import { EngineResult } from "@/lib/parseResponse";
 
 interface ScoreCardProps {
-  results: (ParsedResult & { error?: string })[];
+  data: {
+    results: EngineResult[];
+  };
 }
 
-type Grade = "A" | "B" | "C" | "D" | "F";
+export default function ScoreCard({ data }: ScoreCardProps) {
+  const allBrands = Array.from(
+    new Set(data.results.flatMap((r) => r.mentions.map((m) => m.brand)))
+  );
 
-const GRADE_STYLES: Record<Grade, { bg: string; text: string; border: string }> = {
-  A: { bg: "bg-emerald-400/15", text: "text-emerald-400", border: "border-emerald-400/40" },
-  B: { bg: "bg-amber-400/15", text: "text-amber-400", border: "border-amber-400/40" },
-  C: { bg: "bg-orange-400/15", text: "text-orange-400", border: "border-orange-400/40" },
-  D: { bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/40" },
-  F: { bg: "bg-zinc-800", text: "text-zinc-500", border: "border-zinc-700" },
-};
+  const groq = data.results.find((r) => r.engine === "Llama (Groq)");
+  const gemini = data.results.find((r) => r.engine === "Gemini");
+  const bsr = data.results.find((r) => r.engine === "Amazon BSR");
 
-function calculateGrade(rank: number | null, sentiment: string | null): Grade {
-  if (rank === null) return "F";
-  let score = 100 - (rank - 1) * 20; // 100 for #1, 80 for #2, etc.
-  if (sentiment === "positive") score += 15;
-  if (sentiment === "mentioned briefly") score -= 20;
-  if (score >= 90) return "A";
-  if (score >= 75) return "B";
-  if (score >= 55) return "C";
-  if (score >= 35) return "D";
-  return "F";
-}
-
-function getBrandSummary(brand: string, results: (ParsedResult & { error?: string })[]): string {
-  const appearances = results.map((r) => {
-    const m = r.mentions.find((m) => m.brand.toLowerCase() === brand.toLowerCase());
-    return m ? { engine: r.engine, rank: m.rank } : null;
-  });
-  const found = appearances.filter(Boolean);
-
-  if (found.length === 2) {
-    const ranks = found.map((f) => `#${f!.rank} on ${f!.engine}`).join(" & ");
-    return `Appears in both engines — ${ranks}`;
-  }
-  if (found.length === 1) {
-    const f = found[0]!;
-    return `Only visible to ${f.engine} at position #${f.rank}`;
-  }
-  return "Invisible to AI — not mentioned in either engine";
-}
-
-export default function ScoreCard({ results }: ScoreCardProps) {
-  // Collect all unique brands across both engines
-  const allBrands = new Map<string, { engine: string; rank: number; sentiment: string }[]>();
-
-  for (const result of results) {
-    for (const mention of result.mentions) {
-      const key = mention.brand.toLowerCase();
-      if (!allBrands.has(key)) allBrands.set(key, []);
-      allBrands.get(key)!.push({
-        engine: result.engine,
-        rank: mention.rank,
-        sentiment: mention.sentiment,
-      });
-    }
+  function getRank(engine: EngineResult | undefined, brand: string) {
+    const mention = engine?.mentions.find((m) => m.brand === brand);
+    return mention ? mention.rank : null;
   }
 
-  // Sort: brands in both engines first, then by combined rank score
-  const sorted = Array.from(allBrands.entries()).sort((a, b) => {
-    const aScore = a[1].reduce((s, m) => s + (10 - m.rank), 0);
-    const bScore = b[1].reduce((s, m) => s + (10 - m.rank), 0);
-    return bScore - aScore;
-  });
+  function getGrade(brand: string) {
+    const groqRank = getRank(groq, brand);
+    const geminiRank = getRank(gemini, brand);
+    const bsrRank = getRank(bsr, brand);
+    
+    let score = 0;
+    if (groqRank) score += (6 - groqRank);
+    if (geminiRank) score += (6 - geminiRank);
+    if (bsrRank) score += (6 - bsrRank);
 
-  const allEngines = results.map((r) => r.engine);
+    if (score >= 12) return { l: "A", c: "bg-[#10B981]" }; // Emerald
+    if (score >= 8) return { l: "B", c: "bg-[#6366F1]" }; // Indigo
+    if (score >= 4) return { l: "C", c: "bg-[#F5A623]" }; // Amber
+    return { l: "F", c: "bg-[#EF4444]" }; // Red
+  }
+
+  function getVerdict(brand: string) {
+    const inGroq = !!getRank(groq, brand);
+    const inGemini = !!getRank(gemini, brand);
+    const inBSR = !!getRank(bsr, brand);
+
+    if (inBSR && !inGroq && !inGemini) return { label: "AI Blind Spot", type: "F" };
+    if (inGroq && inGemini && inBSR) return { label: "Dominates", type: "A" };
+    return { label: "Weak Signal", type: "C" };
+  }
 
   return (
-    <div className="border border-zinc-800 rounded-xl overflow-hidden">
-      <div className="border-b border-zinc-800 bg-zinc-900/60 px-5 py-4">
-        <h2 className="font-mono text-xs font-bold tracking-widest uppercase text-zinc-400">
-          ◈ Combined Score Card
-        </h2>
-        <p className="font-mono text-[10px] text-zinc-600 mt-0.5">
-          Graded across all AI engines combined
-        </p>
+    <div className="mt-24 space-y-8">
+      <div>
+        <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-600 mb-1">Comparative Analytics</p>
+        <h2 className="font-serif text-3xl text-white">Market Visibility Scorecard</h2>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="bg-[#09090B] border border-white/5 rounded-xl overflow-hidden shadow-2xl">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-zinc-800">
-              <th className="text-left px-5 py-3 font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                Brand
-              </th>
-              {allEngines.map((engine) => (
-                <th
-                  key={engine}
-                  className="text-center px-4 py-3 font-mono text-[10px] text-zinc-500 uppercase tracking-widest"
-                >
-                  {engine}
-                </th>
-              ))}
-              <th className="text-center px-4 py-3 font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                Grade
-              </th>
-              <th className="text-left px-5 py-3 font-mono text-[10px] text-zinc-500 uppercase tracking-widest hidden md:table-cell">
-                Insight
-              </th>
+            <tr className="border-b border-white/5 bg-white/[0.02]">
+              <th className="px-6 py-4 font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-500">Brand & Signal</th>
+              <th className="px-4 py-4 font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-500">Groq</th>
+              <th className="px-4 py-4 font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-500">Gemini</th>
+              <th className="px-4 py-4 font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-500">Amazon BSR</th>
+              <th className="px-6 py-4 font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-500">Visibility Bar</th>
+              <th className="px-6 py-4 font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-500 text-right">Grade</th>
             </tr>
           </thead>
           <tbody>
-            {sorted.slice(0, 10).map(([brandKey, appearances]) => {
-              // Recover display casing
-              const displayName = results
-                .flatMap((r) => r.mentions)
-                .find((m) => m.brand.toLowerCase() === brandKey)?.brand ?? brandKey;
-
-              const rankByEngine = Object.fromEntries(
-                appearances.map((a) => [a.engine, { rank: a.rank, sentiment: a.sentiment }])
-              );
-
-              // Overall grade: average of per-engine grades
-              const grades = allEngines.map((engine) => {
-                const data = rankByEngine[engine];
-                return calculateGrade(data?.rank ?? null, data?.sentiment ?? null);
-              });
-              const gradeOrder: Grade[] = ["A", "B", "C", "D", "F"];
-              const worstGrade = grades.sort(
-                (a, b) => gradeOrder.indexOf(b) - gradeOrder.indexOf(a)
-              )[0] as Grade;
-              const gradeStyle = GRADE_STYLES[worstGrade];
-
-              const summary = getBrandSummary(displayName, results);
+            {allBrands.map((brand, i) => {
+              const grade = getGrade(brand);
+              const verdict = getVerdict(brand);
+              const gRank = getRank(groq, brand);
+              const gemRank = getRank(gemini, brand);
+              const bsrRank = getRank(bsr, brand);
+              
+              const visWidth = gRank || gemRank || bsrRank ? (100 - ( ( (gRank||6) + (gemRank||6) + (bsrRank||6) ) / 18 * 100 ) ) : 10;
 
               return (
-                <tr
-                  key={brandKey}
-                  className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
-                >
-                  <td className="px-5 py-3.5">
-                    <span className="font-fraunces text-sm text-white font-medium">
-                      {displayName}
-                    </span>
+                <tr key={brand} className="group hover:bg-white/[0.02] transition-colors border-b border-white/[0.03] last:border-0 h-[48px]">
+                  <td className="px-6 py-0">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-[3px] h-4 rounded-full ${grade.c}`} />
+                      <span className="font-sans text-[14px] font-medium text-white">{brand}</span>
+                      <span className="font-sans text-[10px] text-zinc-600 uppercase tracking-widest ml-1">{verdict.label}</span>
+                    </div>
                   </td>
-                  {allEngines.map((engine) => {
-                    const data = rankByEngine[engine];
-                    const g = calculateGrade(data?.rank ?? null, data?.sentiment ?? null);
-                    const gs = GRADE_STYLES[g];
-                    return (
-                      <td key={engine} className="text-center px-4 py-3.5">
-                        {data ? (
-                          <span className="font-mono text-sm text-zinc-300">#{data.rank}</span>
-                        ) : (
-                          <span className="font-mono text-xs text-zinc-700">—</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                  <td className="text-center px-4 py-3.5">
-                    <span
-                      className={`inline-flex items-center justify-center w-8 h-8 rounded-md border font-mono text-sm font-black ${gradeStyle.bg} ${gradeStyle.text} ${gradeStyle.border}`}
-                    >
-                      {worstGrade}
-                    </span>
+                  <td className="px-4 py-0 font-sans text-[13px]">
+                    {gRank ? <span className="text-white">#{gRank}</span> : <span className="text-zinc-800">N/A</span>}
                   </td>
-                  <td className="px-5 py-3.5 hidden md:table-cell">
-                    <span className="font-mono text-[10px] text-zinc-500 leading-relaxed">
-                      {summary}
-                    </span>
+                  <td className="px-4 py-0 font-sans text-[13px]">
+                    {gemRank ? <span className="text-white">#{gemRank}</span> : <span className="text-zinc-800">N/A</span>}
+                  </td>
+                  <td className="px-4 py-0 font-sans text-[13px]">
+                    {bsrRank ? <span className="text-white">#{bsrRank}</span> : <span className="text-zinc-800">N/A</span>}
+                  </td>
+                  <td className="px-6 py-0 w-[200px]">
+                    <div className="v-bar-track">
+                      <div className={`v-bar-fill ${grade.c} opacity-80`} style={{ width: `${Math.max(visWidth, 20)}%` }} />
+                    </div>
+                  </td>
+                  <td className="px-6 py-0 text-right">
+                    <div className={`inline-flex w-[30px] h-[30px] rounded-full items-center justify-center font-sans text-[12px] font-bold text-white shadow-lg ${grade.c}`}>
+                      {grade.l}
+                    </div>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-
-        {sorted.length === 0 && (
-          <div className="py-12 text-center font-mono text-xs text-zinc-600">
-            No brand data to score yet.
-          </div>
-        )}
       </div>
     </div>
   );

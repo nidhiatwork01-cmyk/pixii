@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import LoadingSequence from "@/components/LoadingSequence";
 
 const EXAMPLE_QUERIES = [
-  "best magnesium supplement for seniors",
+  "best korean sunscreen for oily skin",
+  "best korean serum for glow",
   "organic protein powder for women",
   "collagen peptides for joint health",
-  "probiotic supplements for gut health",
-  "creatine monohydrate for beginners",
+  "best magnesium supplement for seniors",
 ];
 
 export default function HomePage() {
@@ -38,8 +38,6 @@ export default function HomePage() {
 
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
-
-      // Store results in sessionStorage and navigate
       sessionStorage.setItem("aeo_results", JSON.stringify(data));
       router.push("/results");
     } catch (err) {
@@ -53,204 +51,121 @@ export default function HomePage() {
   }
 
   return (
-    <>
+    <div className="bg-obsidian-mesh tech-grid-silver min-h-screen text-white relative overflow-hidden flex flex-col">
       <LoadingSequence isVisible={isLoading} />
+      
+      {/* Ambient Depth Orbs */}
+      <div className="absolute top-0 right-[-10%] w-[800px] h-[800px] bg-[#6366F1]/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-[-10%] w-[600px] h-[600px] bg-[#22D3EE]/5 blur-[120px] rounded-full pointer-events-none" />
 
-      {/* Scanline texture */}
-      <div className="results-scan-overlay" />
-
-      <main className="relative z-10 min-h-screen flex flex-col">
-        {/* Live ticker bar */}
-        <div className="border-b border-zinc-900 bg-zinc-950/80 py-2 overflow-hidden">
-          <div className="ticker-bar">
-            <div className="ticker-inner font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-              {[...Array(2)].flatMap((_, i) =>
-                EXAMPLE_QUERIES.map((q, j) => (
-                  <span key={`${i}-${j}`} className="shrink-0">
-                    <span className="text-amber-400/50 mr-2">◈</span>
-                    {q}
-                    <span className="mx-6 text-zinc-800">|</span>
-                  </span>
-                ))
-              )}
-            </div>
+      {/* Live ticker bar */}
+      <div className="border-b border-white/5 bg-black/40 py-2 backdrop-blur-sm overflow-hidden">
+        <div className="ticker-bar">
+          <div className="ticker-inner">
+            {[...Array(2)].flatMap((_, i) =>
+              EXAMPLE_QUERIES.map((q, j) => (
+                <span key={`ticker-${i}-${j}`} className="shrink-0 font-sans text-[9px] uppercase tracking-[0.2em] text-zinc-500">
+                  <span className="text-[#F5A623] mr-2">◈</span>
+                  {q} <span className="mx-6 text-white/5">|</span>
+                </span>
+              ))
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Nav */}
-        <nav className="border-b border-zinc-900/60 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-amber-400 text-lg font-bold">◈</span>
-            <span className="font-mono text-sm font-bold tracking-widest text-white uppercase">
-              Pixii
-            </span>
-            <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest ml-1">
-              / AEO Scout
-            </span>
-          </div>
-          <a
-            href="https://pixii.ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest hover:text-amber-400 transition-colors"
-          >
-            pixii.ai →
-          </a>
-        </nav>
+      {/* Nav */}
+      <nav className="px-6 py-6 flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 bg-[#F5A623] rotate-45" />
+          <span className="font-sans text-[11px] font-bold uppercase tracking-[0.3em]">Pixii</span>
+          <span className="font-sans text-[10px] text-zinc-600 tracking-widest ml-1">/ AEO SCOUT</span>
+        </div>
+        <a href="https://pixii.ai" className="font-sans text-[10px] text-zinc-500 hover:text-white uppercase tracking-widest transition-colors">
+          pixii.ai →
+        </a>
+      </nav>
 
-        {/* Hero */}
-        <section className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
-          {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2 border border-amber-400/30 bg-amber-400/5 rounded-full px-4 py-1.5 mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-            <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest">
-              Answer Engine Optimization Diagnostic
-            </span>
-          </div>
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center relative z-10">
+        {/* Eyebrow */}
+        <div className="inline-flex items-center gap-2 border border-white/10 bg-white/5 rounded-full px-4 py-1.5 mb-10 backdrop-blur-md">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] shadow-[0_0_10px_rgba(99,102,241,0.5)] animate-pulse" />
+          <span className="font-sans text-[10px] text-white/60 uppercase tracking-[0.2em]">
+            Visibility Diagnostic Engine
+          </span>
+        </div>
 
-          {/* Headline */}
-          <h1 className="font-fraunces text-5xl sm:text-6xl md:text-7xl font-bold text-white leading-[1.05] max-w-4xl">
-            Where does{" "}
-            <span className="relative inline-block">
-              <span className="text-amber-400">AI send</span>
-              <span className="absolute -bottom-1 left-0 right-0 h-px bg-amber-400/40" />
-            </span>{" "}
-            <br className="hidden sm:block" />
-            your customers?
-          </h1>
+        {/* Headline */}
+        <h1 className="font-serif text-5xl sm:text-6xl md:text-8xl text-white leading-tight max-w-5xl">
+          Where does <span className="text-[#F5A623]">AI send</span> <br className="hidden sm:block" />
+          your customers?
+        </h1>
 
-          {/* Subheadline */}
-          <p className="mt-6 max-w-xl font-mono text-sm text-zinc-400 leading-relaxed">
-            When shoppers ask AI &ldquo;what should I buy?&rdquo; — Claude and Gemini become the new
-            shelf. AEO Scout shows exactly which brands get mentioned, ranked, and recommended — and
-            where yours stands.
-          </p>
+        <p className="mt-8 max-w-xl font-sans text-base text-zinc-400 leading-relaxed">
+          Claude and Gemini are the new shelf. AEO Scout shows exactly which brands get ranked and recommended — and where you stand.
+        </p>
 
-          {/* Search box */}
-          <div className="mt-12 w-full max-w-2xl">
-            <div className="relative group">
-              <div className="absolute -inset-px rounded-xl bg-gradient-to-r from-amber-400/30 via-amber-400/10 to-amber-400/30 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
-              <div className="relative flex items-center bg-zinc-900 border border-zinc-800 group-focus-within:border-amber-400/50 rounded-xl transition-colors duration-200">
-                <span className="pl-5 font-mono text-zinc-600 shrink-0 text-lg">$</span>
-                <input
-                  ref={inputRef}
-                  id="query-input"
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder='Try: "best magnesium supplement for seniors"'
-                  className="flex-1 bg-transparent px-4 py-5 font-mono text-sm text-white placeholder:text-zinc-600 outline-none"
-                  aria-label="Shopping query"
-                  maxLength={300}
-                  disabled={isLoading}
-                />
-                <button
-                  id="scout-btn"
-                  onClick={() => handleSearch()}
-                  disabled={isLoading || !query.trim()}
-                  className="mr-2 shrink-0 px-6 py-3 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed text-black font-mono text-xs font-bold uppercase tracking-widest rounded-lg transition-all duration-200 hover:shadow-[0_0_20px_rgba(245,166,35,0.4)] active:scale-95"
-                >
-                  Scout →
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <p className="mt-3 font-mono text-xs text-red-400 text-left">{error}</p>
-            )}
-
-            {/* Example queries */}
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {EXAMPLE_QUERIES.slice(0, 4).map((q) => (
-                <button
-                  key={q}
-                  onClick={() => {
-                    setQuery(q);
-                    handleSearch(q);
-                  }}
-                  disabled={isLoading}
-                  className="font-mono text-[10px] text-zinc-600 hover:text-amber-400 border border-zinc-800 hover:border-amber-400/30 rounded-full px-3 py-1.5 transition-all duration-150 disabled:opacity-40"
-                >
-                  {q}
-                </button>
-              ))}
+        {/* Search box */}
+        <div className="mt-14 w-full max-w-3xl">
+          <div className="relative group">
+            <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-[#6366F1]/40 to-[#22D3EE]/40 opacity-0 group-focus-within:opacity-100 blur-sm transition-opacity" />
+            <div className="relative flex items-center bg-[#111116] border border-white/10 group-focus-within:border-white/20 rounded-2xl p-1.5 transition-all">
+              <span className="pl-5 font-sans text-zinc-700 text-xl">$</span>
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder='Try: "best magnesium supplement for seniors"'
+                className="flex-1 bg-transparent px-4 py-4 font-sans text-base text-white placeholder:text-zinc-700 outline-none"
+              />
+              <button
+                onClick={() => handleSearch()}
+                disabled={isLoading || !query.trim()}
+                className="px-8 py-4 bg-[#F5A623] hover:bg-[#FBBF24] disabled:opacity-40 text-black font-sans text-xs font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-xl"
+              >
+                Scout →
+              </button>
             </div>
           </div>
+          {error && <p className="mt-4 font-sans text-xs text-red-400">{error}</p>}
 
-          {/* Stats row */}
-          <div className="mt-16 flex flex-wrap justify-center gap-8">
-            {[
-              { value: "2", label: "AI engines scanned" },
-              { value: "<10s", label: "average scan time" },
-              { value: "A–F", label: "brand visibility grade" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="font-mono text-2xl font-black text-amber-400">{stat.value}</div>
-                <div className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
-                  {stat.label}
-                </div>
-              </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            {EXAMPLE_QUERIES.slice(0, 4).map((q) => (
+              <button
+                key={q}
+                onClick={() => { setQuery(q); handleSearch(q); }}
+                className="font-sans text-[10px] text-zinc-500 hover:text-white border border-white/5 hover:border-white/20 bg-white/5 rounded-full px-4 py-2 transition-all"
+              >
+                {q}
+              </button>
             ))}
           </div>
-        </section>
-
-        {/* How it works */}
-        <section className="border-t border-zinc-900 px-6 py-16">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest text-center mb-10">
-              How AEO Scout works
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {[
-                {
-                  step: "01",
-                  title: "You type a query",
-                  body: "Any shopping question your customer might ask an AI — product category, use case, concern.",
-                },
-                {
-                  step: "02",
-                  title: "We query the engines",
-                  body: "Claude and Gemini both receive your query simultaneously. Real responses, real data.",
-                },
-                {
-                  step: "03",
-                  title: "You see the truth",
-                  body: "Which brands get named, in what order, with what language — and where yours ranks.",
-                },
-              ].map((item) => (
-                <div
-                  key={item.step}
-                  className="border border-zinc-900 rounded-xl p-6 hover:border-zinc-800 transition-colors"
-                >
-                  <span className="font-mono text-3xl font-black text-amber-400/40">
-                    {item.step}
-                  </span>
-                  <h3 className="font-fraunces text-base font-semibold text-white mt-2">
-                    {item.title}
-                  </h3>
-                  <p className="font-mono text-xs text-zinc-500 mt-2 leading-relaxed">{item.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="border-t border-zinc-900 px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="font-mono text-[10px] text-zinc-700 uppercase tracking-widest">
-            © 2024 Pixii — AI design tools for Amazon sellers
-          </span>
-          <a
-            href="https://pixii.ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-[10px] text-zinc-700 hover:text-amber-400 transition-colors uppercase tracking-widest"
-          >
-            pixii.ai
-          </a>
-        </footer>
+        </div>
       </main>
-    </>
+
+      {/* Stats/How it works redesigned as obsidian cards */}
+      <section className="px-6 py-20 relative z-10 border-t border-white/5">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { step: "01", title: "Scan the Engines", body: "We query Claude, Gemini, and Amazon simultaneously to reveal the new search landscape." },
+            { step: "02", title: "Detect Blind Spots", body: "Identify brands that dominate Amazon sales but are completely ignored by AI." },
+            { step: "03", title: "Optimize Visibility", body: "Get the data you need to pivot your SEO and AEO strategy for the AI era." }
+          ].map(item => (
+            <div key={item.step} className="obsidian-card p-8 group hover:border-white/20 transition-all">
+              <span className="font-serif text-4xl text-zinc-800 group-hover:text-[#F5A623]/20 transition-colors">{item.step}</span>
+              <h3 className="font-serif text-xl text-white mt-4">{item.title}</h3>
+              <p className="font-sans text-sm text-zinc-500 mt-3 leading-relaxed">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <footer className="px-6 py-10 border-t border-white/5 flex justify-between items-center opacity-40">
+        <span className="font-sans text-[10px] uppercase tracking-widest text-zinc-600">© 2024 PIXII — AI AEO SCOUT</span>
+        <a href="https://pixii.ai" className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 hover:text-white transition-colors">pixii.ai</a>
+      </footer>
+    </div>
   );
 }
