@@ -7,7 +7,7 @@
 
 > **Where does AI send your customers?**
 
-**[Live Link: Insert your deployed URL here]**
+**[Live Demo: pixii-5zqb.vercel.app](https://pixii-5zqb.vercel.app/)**
 
 ## What is AEO?
 
