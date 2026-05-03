@@ -42,12 +42,12 @@ const DEFAULT_RANK = {
   pill: "bg-zinc-700 text-zinc-300",
 };
 
-const SENTIMENT_STYLES = {
-  positive: "bg-emerald-400/15 text-emerald-400 border border-emerald-400/30",
-  neutral: "bg-zinc-700/50 text-zinc-400 border border-zinc-600/30",
-  "mentioned briefly":
-    "bg-zinc-800/70 text-zinc-500 border border-zinc-700/30",
+const SENTIMENT_STYLES: Record<string, string> = {
+  POSITIVE: "bg-emerald-400/15 text-emerald-400 border border-emerald-400/30",
+  NEUTRAL: "bg-zinc-700/50 text-zinc-400 border border-zinc-600/30",
+  NEGATIVE: "bg-red-500/15 text-red-400 border border-red-500/30",
 };
+
 
 export default function BrandBadge({ mention }: BrandBadgeProps) {
   const rank = mention.rank as 1 | 2 | 3;
