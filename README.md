@@ -14,12 +14,12 @@
 
 ## Features
 
-- 🔍 **Dual-engine scanning** — Claude (Anthropic) + Gemini (Google) queried in parallel
-- 📊 **Ranked brand mentions** — gold/silver/bronze position badges
-- 💬 **Sentiment analysis** — Positive / Neutral / Mentioned Briefly
-- ⭐ **Combined score card** — A–F grade across both engines
-- ⚡ **Live loading sequence** — step-by-step diagnostic animation
-- 📱 **Mobile responsive** — columns stack on small screens
+- **Dual-engine scanning** — Claude (Anthropic) + Gemini (Google) queried in parallel
+- **Ranked brand mentions** — gold/silver/bronze position badges
+- **Sentiment analysis** — Positive / Neutral / Mentioned Briefly
+- **Combined score card** — A–F grade across both engines
+- **Live loading sequence** — step-by-step diagnostic animation
+- **Mobile responsive** — columns stack on small screens
 
 ---
 

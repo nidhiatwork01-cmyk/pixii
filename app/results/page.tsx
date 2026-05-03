@@ -76,7 +76,7 @@ export default function ResultsPage() {
                   {dominator ? (
                     <span className="flex items-center gap-3">
                       <span className="font-sans font-bold text-[10px] uppercase tracking-widest bg-[#F5A623]/10 text-[#F5A623] border border-[#F5A623]/20 px-3 py-1 rounded-full">
-                        👑 Dominates
+                        Dominates
                       </span>
                       <span>{dominator.replace(/\*\*/g, "")} is the clear market leader in AI recommendations.</span>
                     </span>
@@ -86,7 +86,7 @@ export default function ResultsPage() {
                   {blindSpot && (
                     <div className="mt-4 flex items-center gap-3">
                       <span className="font-sans font-bold text-[10px] uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full">
-                        🚨 AI Blind Spot
+                        AI Blind Spot
                       </span>
                       <span>{blindSpot.brand.replace(/\*\*/g, "")} is ranked #{blindSpot.rank} on Amazon but invisible to AI engines.</span>
                     </div>
