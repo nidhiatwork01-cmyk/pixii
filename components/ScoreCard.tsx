@@ -53,8 +53,8 @@ export default function ScoreCard({ data }: ScoreCardProps) {
         <h2 className="font-serif text-3xl text-white">Market Visibility Scorecard</h2>
       </div>
 
-      <div className="bg-[#09090B] border border-white/5 rounded-xl overflow-hidden shadow-2xl">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-[#09090B] border border-white/5 rounded-xl overflow-hidden shadow-2xl overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr className="border-b border-white/5 bg-white/[0.02]">
               <th className="px-6 py-4 font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-500">Brand & Signal</th>

@@ -96,7 +96,7 @@ export default function HomePage() {
         </div>
 
         {/* Headline */}
-        <h1 className="font-serif text-5xl sm:text-6xl md:text-8xl text-white leading-tight max-w-5xl">
+        <h1 className="font-serif text-4xl sm:text-5xl md:text-8xl text-white leading-tight max-w-5xl">
           Where does <span className="text-[#F5A623]">AI send</span> <br className="hidden sm:block" />
           your customers?
         </h1>
@@ -117,13 +117,13 @@ export default function HomePage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder='Try: "best magnesium supplement for seniors"'
-                className="flex-1 bg-transparent px-4 py-4 font-sans text-base text-white placeholder:text-zinc-700 outline-none"
+                placeholder='Try: "best magnesium supplement"'
+                className="flex-1 bg-transparent px-2 sm:px-4 py-3 sm:py-4 font-sans text-sm sm:text-base text-white placeholder:text-zinc-700 outline-none min-w-0"
               />
               <button
                 onClick={() => handleSearch()}
                 disabled={isLoading || !query.trim()}
-                className="px-8 py-4 bg-[#F5A623] hover:bg-[#FBBF24] disabled:opacity-40 text-black font-sans text-xs font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-xl"
+                className="px-4 sm:px-8 py-3 sm:py-4 bg-[#F5A623] hover:bg-[#FBBF24] disabled:opacity-40 text-black font-sans text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-xl whitespace-nowrap"
               >
                 Scout →
               </button>
@@ -162,8 +162,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="px-6 py-10 border-t border-white/5 flex justify-between items-center opacity-40">
-        <span className="font-sans text-[10px] uppercase tracking-widest text-zinc-600">© 2024 PIXII — AI AEO SCOUT</span>
+      <footer className="px-6 py-10 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 opacity-40">
+        <span className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 text-center">© 2024 PIXII — AI AEO SCOUT</span>
         <a href="https://pixii.ai" className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 hover:text-white transition-colors">pixii.ai</a>
       </footer>
     </div>

@@ -62,7 +62,7 @@ export default function ResultsPage() {
             <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
             <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-600">Query Identified</p>
           </div>
-          <h1 className="font-serif text-5xl md:text-6xl text-white mb-10 max-w-4xl leading-tight">
+          <h1 className="font-serif text-4xl md:text-6xl text-white mb-10 max-w-4xl leading-tight">
             &ldquo;{data.query}&rdquo;
           </h1>
           
@@ -74,21 +74,21 @@ export default function ResultsPage() {
                 <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-zinc-600 mb-2">AI Engine Verdict</p>
                 <div className="font-serif text-xl text-zinc-300 leading-relaxed">
                   {dominator ? (
-                    <span className="flex items-center gap-3">
-                      <span className="font-sans font-bold text-[10px] uppercase tracking-widest bg-[#F5A623]/10 text-[#F5A623] border border-[#F5A623]/20 px-3 py-1 rounded-full">
+                    <span className="flex flex-col sm:flex-row sm:items-center gap-3 items-start">
+                      <span className="font-sans font-bold text-[10px] uppercase tracking-widest bg-[#F5A623]/10 text-[#F5A623] border border-[#F5A623]/20 px-3 py-1 rounded-full shrink-0">
                         Dominates
                       </span>
-                      <span>{dominator.replace(/\*\*/g, "")} is the clear market leader in AI recommendations.</span>
+                      <span className="text-base sm:text-xl">{dominator.replace(/\*\*/g, "")} is the clear market leader in AI recommendations.</span>
                     </span>
                   ) : (
                     "No single brand dominance identified across AI models."
                   )}
                   {blindSpot && (
-                    <div className="mt-4 flex items-center gap-3">
-                      <span className="font-sans font-bold text-[10px] uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full">
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3 items-start">
+                      <span className="font-sans font-bold text-[10px] uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full shrink-0">
                         AI Blind Spot
                       </span>
-                      <span>{blindSpot.brand.replace(/\*\*/g, "")} is ranked #{blindSpot.rank} on Amazon but invisible to AI engines.</span>
+                      <span className="text-base sm:text-xl">{blindSpot.brand.replace(/\*\*/g, "")} is ranked #{blindSpot.rank} on Amazon but invisible to AI engines.</span>
                     </div>
                   )}
                 </div>
