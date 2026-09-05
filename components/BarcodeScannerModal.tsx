@@ -56,6 +56,32 @@ export default function BarcodeScannerModal({
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  const systemCameraInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Pre-populate cameras on modal mount
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then((devices) => {
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
+        if (videoDevices.length > 0) {
+          const list = videoDevices.map((d, i) => ({
+            id: d.deviceId,
+            label: d.label || `Camera ${i + 1}`,
+          }));
+          setAvailableCameras(list);
+          const integrated = list.find((c) => {
+            const l = c.label.toLowerCase();
+            return (
+              (l.includes("integrated") || l.includes("built-in") || l.includes("webcam") || l.includes("camera")) &&
+              !l.includes("virtual")
+            );
+          });
+          if (integrated) setSelectedCameraId(integrated.id);
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
   // Stop camera stream safely
   function stopCameraStream() {
     if (scanIntervalRef.current) {
@@ -84,15 +110,23 @@ export default function BarcodeScannerModal({
         throw new Error("Camera API is not supported in this browser environment.");
       }
 
-      // Connect video stream using ideal constraints so it never hangs
       const targetId = cameraId || selectedCameraId;
-      const constraints: MediaStreamConstraints = {
-        video: targetId
-          ? { deviceId: { ideal: targetId } }
-          : { facingMode: "user" },
-      };
+      let stream: MediaStream | null = null;
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      try {
+        const constraints: MediaStreamConstraints = {
+          video: targetId ? { deviceId: { ideal: targetId } } : true,
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (specificErr) {
+        console.warn("Specific camera failed, trying simple video: true fallback...", specificErr);
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+
+      if (!stream) {
+        throw new Error("Could not acquire video stream.");
+      }
+
       streamRef.current = stream;
 
       // Attach immediately to video element
@@ -134,7 +168,7 @@ export default function BarcodeScannerModal({
       setErrorMessage(
         err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
           ? "Camera permission denied. Click the lock icon in Chrome to allow camera access."
-          : err.message || "Failed to initialize camera. You can switch camera, use Photo Upload, or click Samples!"
+          : (err.message || "Failed to initialize camera.")
       );
     }
   }
@@ -315,8 +349,16 @@ export default function BarcodeScannerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-lg bg-[#0F0F14] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Hidden Canvas for Frame Grab */}
+        {/* Hidden Canvas and Native Camera Capture Input */}
         <canvas ref={canvasRef} className="hidden" />
+        <input
+          ref={systemCameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
 
         {/* Top Accent Line */}
         <div className="h-1 w-full bg-gradient-to-r from-[#22D3EE] via-[#F5A623] to-[#6366F1]" />
@@ -408,22 +450,61 @@ export default function BarcodeScannerModal({
                   )}
 
                   <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3] border border-white/10 flex items-center justify-center">
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover"
-                    />
-
-                    {/* Scanning reticle overlay */}
-                    {isScanning && (
-                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                        <div className="w-64 h-36 border-2 border-[#F5A623]/60 rounded-xl relative overflow-hidden shadow-[0_0_20px_rgba(245,166,35,0.2)]">
-                          {/* Animated laser beam */}
-                          <div className="absolute top-0 left-0 w-full h-0.5 bg-[#F5A623] animate-pulse shadow-[0_0_10px_#F5A623]" />
+                    {errorMessage && !isScanning ? (
+                      <div className="flex flex-col items-center justify-center p-6 text-center space-y-3 z-10">
+                        <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl">
+                          📷
+                        </div>
+                        <div>
+                          <p className="font-serif text-sm text-white">Browser Camera In Use or Timed Out</p>
+                          <p className="font-sans text-[11px] text-zinc-400 mt-1 max-w-xs">
+                            Windows camera driver is busy. You can snap a photo with your device camera or scout an instant sample:
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 justify-center pt-1">
+                          <button
+                            type="button"
+                            onClick={() => systemCameraInputRef.current?.click()}
+                            className="px-4 py-2 rounded-xl bg-[#F5A623] hover:bg-[#FBBF24] font-sans text-xs font-bold text-black uppercase tracking-wider transition-all shadow-md active:scale-98"
+                          >
+                            📸 Snap Photo (Camera)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab("samples")}
+                            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-sans text-xs uppercase tracking-wider transition-all"
+                          >
+                            ⚡ Instant Samples
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => startNativeCamera()}
+                            className="px-3 py-2 rounded-xl border border-white/10 hover:border-white/20 text-zinc-400 hover:text-white font-sans text-xs transition-all"
+                          >
+                            🔄 Retry
+                          </button>
                         </div>
                       </div>
+                    ) : (
+                      <>
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+
+                        {/* Scanning reticle overlay */}
+                        {isScanning && (
+                          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                            <div className="w-64 h-36 border-2 border-[#F5A623]/60 rounded-xl relative overflow-hidden shadow-[0_0_20px_rgba(245,166,35,0.2)]">
+                              {/* Animated laser beam */}
+                              <div className="absolute top-0 left-0 w-full h-0.5 bg-[#F5A623] animate-pulse shadow-[0_0_10px_#F5A623]" />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -431,11 +512,10 @@ export default function BarcodeScannerModal({
                   <div className="flex gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={handleSnapAndIdentify}
-                      disabled={!isScanning}
+                      onClick={isScanning ? handleSnapAndIdentify : () => systemCameraInputRef.current?.click()}
                       className="flex-1 py-2.5 px-4 bg-gradient-to-r from-[#22D3EE]/20 via-[#F5A623]/20 to-[#6366F1]/20 hover:from-[#22D3EE]/30 hover:to-[#6366F1]/30 border border-[#F5A623]/40 rounded-xl text-white font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-98"
                     >
-                      <span>📸</span> Snap & AI Identify Product
+                      <span>📸</span> {isScanning ? "Snap & AI Identify Product" : "Take / Upload Photo with Camera"}
                     </button>
                   </div>
 
