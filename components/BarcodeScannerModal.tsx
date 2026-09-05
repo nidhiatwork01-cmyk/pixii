@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
 import { ProductDossier } from "@/app/api/barcode/route";
 
 interface BarcodeScannerModalProps {
@@ -52,141 +51,180 @@ export default function BarcodeScannerModal({
   const [availableCameras, setAvailableCameras] = useState<{ id: string; label: string }[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
 
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const readerElementId = "pixii-barcode-reader";
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Start live camera
-  async function startCamera(specificCameraId?: string) {
+  // Stop camera stream safely
+  function stopCameraStream() {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsScanning(false);
+  }
+
+  // Start native camera stream
+  async function startNativeCamera(cameraId?: string) {
     try {
       setErrorMessage("");
-      setScanStatus("Initializing camera...");
+      setScanStatus("Requesting camera access...");
+      stopCameraStream();
 
-      if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(readerElementId);
+      // Enumerate devices
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera API is not supported in this browser environment.");
       }
 
-      // Request media stream first to unlock camera labels and check availability
+      // Initial request to unlock labels
+      let initialStream: MediaStream | null = null;
       try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          testStream.getTracks().forEach((track) => track.stop());
-        }
-      } catch (permErr: any) {
-        if (permErr.name === "NotAllowedError" || permErr.name === "PermissionDeniedError") {
-          throw new Error("Camera permission denied. Please allow camera access in Chrome or use Photo Upload / Samples.");
+        initialStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      } catch (err: any) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          throw new Error("Camera permission denied. Please allow camera permissions in Chrome settings.");
         }
       }
 
-      const devices = await Html5Qrcode.getCameras();
-      if (!devices || devices.length === 0) {
-        throw new Error("No cameras detected on this device. You can use Photo Upload or Sample Barcodes.");
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((d) => d.kind === "videoinput");
+
+      if (initialStream) {
+        initialStream.getTracks().forEach((t) => t.stop());
       }
 
-      setAvailableCameras(devices.map(d => ({ id: d.id, label: d.label || `Camera ${d.id}` })));
-
-      // Filter out virtual / phone-link cameras (e.g. OnePlus Nord, OBS Virtual Cam)
-      const realCameras = devices.filter(d => {
-        const label = (d.label || "").toLowerCase();
-        return !label.includes("virtual") && !label.includes("nord");
-      });
-
-      const usablePool = realCameras.length > 0 ? realCameras : devices;
-
-      let cameraId = specificCameraId || selectedCameraId;
-      if (!cameraId || !devices.some(d => d.id === cameraId)) {
-        // Find integrated or built-in webcam
-        const integrated = usablePool.find(d => {
-          const l = (d.label || "").toLowerCase();
-          return l.includes("integrated") || l.includes("built-in") || l.includes("webcam") || l.includes("camera") || l.includes("hd");
-        }) || usablePool[0];
-        cameraId = integrated.id;
+      if (videoDevices.length === 0) {
+        throw new Error("No physical cameras detected. Use Photo Upload or Sample Barcodes.");
       }
 
-      setSelectedCameraId(cameraId);
+      const cameraList = videoDevices.map((d, i) => ({
+        id: d.deviceId,
+        label: d.label || `Camera ${i + 1}`,
+      }));
+      setAvailableCameras(cameraList);
 
-      // Attempt start with chosen physical camera
-      try {
-        await scannerRef.current.start(
-          cameraId,
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 160 },
-            aspectRatio: 1.5,
-          },
-          (decodedText) => {
-            handleBarcodeDetected(decodedText);
-          },
-          () => {}
-        );
-      } catch (firstErr) {
-        console.warn("Specific camera failed, trying generic facingMode...", firstErr);
-        // Fallback: Use generic facingMode so browser auto-selects working physical camera
-        await scannerRef.current.start(
-          { facingMode: "user" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 160 },
-            aspectRatio: 1.5,
-          },
-          (decodedText) => {
-            handleBarcodeDetected(decodedText);
-          },
-          () => {}
-        );
+      // Prioritize Integrated Webcam over Virtual/Phone cameras
+      let targetId = cameraId || selectedCameraId;
+      if (!targetId || !cameraList.some((c) => c.id === targetId)) {
+        const integrated = cameraList.find((c) => {
+          const l = c.label.toLowerCase();
+          return (
+            (l.includes("integrated") || l.includes("built-in") || l.includes("webcam") || l.includes("hd camera")) &&
+            !l.includes("virtual") &&
+            !l.includes("nord")
+          );
+        });
+        const nonVirtual = cameraList.find((c) => {
+          const l = c.label.toLowerCase();
+          return !l.includes("virtual") && !l.includes("nord");
+        });
+        targetId = (integrated || nonVirtual || cameraList[0]).id;
+      }
+
+      setSelectedCameraId(targetId);
+
+      // Connect video stream
+      const constraints: MediaStreamConstraints = {
+        video: targetId
+          ? { deviceId: { exact: targetId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { facingMode: "user" },
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
       }
 
       setIsScanning(true);
-      setScanStatus("Align barcode within the frame");
+      setScanStatus("Point at barcode or click 'Snap & AI Identify'");
+
+      // Setup BarcodeDetector if available
+      initBarcodeDetector();
     } catch (err: any) {
-      console.warn("Camera start failed:", err);
+      console.warn("Camera init failed:", err);
       setIsScanning(false);
       setErrorMessage(
-        err.message?.includes("Timeout") || err.message?.includes("video source")
-          ? "Camera timed out or is in use by another application. You can switch camera source, use Photo Upload, or click Samples!"
-          : (err.message || "Failed to start camera. Try Photo Upload or Sample Barcodes.")
+        err.message?.includes("Timeout") || err.message?.includes("Could not start")
+          ? "Camera is currently busy or reserved by Windows. You can switch camera source, use Photo Upload, or click Samples!"
+          : err.message || "Failed to initialize camera."
       );
     }
   }
 
-  // Switch camera
-  async function switchCamera(newId: string) {
-    await stopCamera();
-    setSelectedCameraId(newId);
-    setTimeout(() => {
-      startCamera(newId);
-    }, 150);
-  }
+  // BarcodeDetector automatic background loop
+  function initBarcodeDetector() {
+    if (typeof window === "undefined" || !("BarcodeDetector" in window)) {
+      console.log("Native BarcodeDetector not available in this browser. Use Snap & Identify or Upload.");
+      return;
+    }
 
-  // Stop camera
-  async function stopCamera() {
-    if (scannerRef.current && isScanning) {
-      try {
-        await scannerRef.current.stop();
-        await scannerRef.current.clear();
-      } catch (e) {
-        console.warn("Camera stop error:", e);
-      }
-      setIsScanning(false);
+    try {
+      const detector = new (window as any).BarcodeDetector({
+        formats: [
+          "ean_13",
+          "ean_8",
+          "upc_a",
+          "upc_e",
+          "code_128",
+          "code_39",
+          "qr_code",
+        ],
+      });
+
+      scanIntervalRef.current = setInterval(async () => {
+        if (!videoRef.current || videoRef.current.readyState < 2) return;
+        try {
+          const barcodes = await detector.detect(videoRef.current);
+          if (barcodes && barcodes.length > 0) {
+            const raw = barcodes[0].rawValue;
+            if (raw) {
+              handleBarcodeDetected(raw);
+            }
+          }
+        } catch {
+          // ignore transient detection frame errors
+        }
+      }, 500);
+    } catch (e) {
+      console.warn("BarcodeDetector setup error:", e);
     }
   }
 
+  // Switch camera dropdown
+  async function handleCameraChange(newId: string) {
+    setSelectedCameraId(newId);
+    await startNativeCamera(newId);
+  }
+
+  // Lifecycle
   useEffect(() => {
     if (isOpen && activeTab === "camera") {
       const timer = setTimeout(() => {
-        startCamera();
-      }, 200);
+        startNativeCamera();
+      }, 150);
       return () => {
         clearTimeout(timer);
-        stopCamera();
+        stopCameraStream();
       };
     } else {
-      stopCamera();
+      stopCameraStream();
     }
   }, [isOpen, activeTab]);
 
-  // Handle scanned barcode
+  // Handle scanned or entered barcode
   async function handleBarcodeDetected(barcode: string) {
-    await stopCamera();
+    stopCameraStream();
     setIsAnalyzing(true);
     setErrorMessage("");
     setScanStatus(`Scanned: ${barcode}. Consulting AI engines...`);
@@ -211,23 +249,77 @@ export default function BarcodeScannerModal({
     }
   }
 
-  // Handle image upload
+  // Snap current camera frame and send to Gemini Vision for instant product identification
+  async function handleSnapAndIdentify() {
+    if (!videoRef.current) return;
+    try {
+      setIsAnalyzing(true);
+      setScanStatus("Analyzing photo with AI Vision...");
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current || document.createElement("canvas");
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not capture frame");
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const base64Image = canvas.toDataURL("image/jpeg", 0.85);
+
+      stopCameraStream();
+
+      const res = await fetch("/api/barcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64Image }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Vision API error: ${res.status}`);
+      }
+
+      const dossier: ProductDossier = await res.json();
+      onDossierReady(dossier);
+      onClose();
+    } catch (err: any) {
+      console.error("Snap identify error:", err);
+      setIsAnalyzing(false);
+      setErrorMessage(err.message || "Could not analyze snapshot. Please try again.");
+    }
+  }
+
+  // Handle image upload with Vision fallback
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setErrorMessage("");
-    setScanStatus("Scanning uploaded image for barcode...");
+    setScanStatus("Analyzing product image...");
     setIsAnalyzing(true);
 
     try {
-      const html5QrCode = new Html5Qrcode("upload-scanner-helper");
-      const decodedText = await html5QrCode.scanFile(file, false);
-      await html5QrCode.clear();
-      handleBarcodeDetected(decodedText);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        try {
+          const res = await fetch("/api/barcode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: base64Data }),
+          });
+          if (!res.ok) throw new Error("Could not identify product from image");
+          const dossier: ProductDossier = await res.json();
+          onDossierReady(dossier);
+          onClose();
+        } catch (err: any) {
+          setIsAnalyzing(false);
+          setErrorMessage(err.message || "Failed to identify product from uploaded image.");
+        }
+      };
+      reader.readAsDataURL(file);
     } catch (err: any) {
       setIsAnalyzing(false);
-      setErrorMessage("No clear barcode detected in the uploaded image. Please try another photo or use a sample barcode.");
+      setErrorMessage("Error reading file. Try a different image or sample barcode.");
     }
   }
 
@@ -243,6 +335,9 @@ export default function BarcodeScannerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-lg bg-[#0F0F14] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Hidden Canvas for Frame Grab */}
+        <canvas ref={canvasRef} className="hidden" />
+
         {/* Top Accent Line */}
         <div className="h-1 w-full bg-gradient-to-r from-[#22D3EE] via-[#F5A623] to-[#6366F1]" />
 
@@ -316,11 +411,11 @@ export default function BarcodeScannerModal({
                   {availableCameras.length > 1 && (
                     <div className="flex items-center justify-between bg-white/[0.03] border border-white/10 px-3 py-2 rounded-xl">
                       <span className="font-sans text-[10px] uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                        <span>📷</span> Camera Source:
+                        <span>📷</span> Camera:
                       </span>
                       <select
                         value={selectedCameraId}
-                        onChange={(e) => switchCamera(e.target.value)}
+                        onChange={(e) => handleCameraChange(e.target.value)}
                         className="bg-[#111116] border border-white/10 hover:border-white/20 rounded-lg px-2.5 py-1 text-xs text-white outline-none focus:border-[#F5A623] cursor-pointer max-w-[220px] truncate"
                       >
                         {availableCameras.map((cam) => (
@@ -333,7 +428,13 @@ export default function BarcodeScannerModal({
                   )}
 
                   <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3] border border-white/10 flex items-center justify-center">
-                    <div id={readerElementId} className="w-full h-full" />
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
 
                     {/* Scanning reticle overlay */}
                     {isScanning && (
@@ -344,6 +445,18 @@ export default function BarcodeScannerModal({
                         </div>
                       </div>
                     )}
+                  </div>
+
+                  {/* Quick Snap Button */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleSnapAndIdentify}
+                      disabled={!isScanning}
+                      className="flex-1 py-2.5 px-4 bg-gradient-to-r from-[#22D3EE]/20 via-[#F5A623]/20 to-[#6366F1]/20 hover:from-[#22D3EE]/30 hover:to-[#6366F1]/30 border border-[#F5A623]/40 rounded-xl text-white font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-98"
+                    >
+                      <span>📸</span> Snap & AI Identify Product
+                    </button>
                   </div>
 
                   {scanStatus && (
@@ -357,12 +470,11 @@ export default function BarcodeScannerModal({
               {/* Upload Photo Tab */}
               {activeTab === "upload" && (
                 <div className="space-y-4">
-                  <div id="upload-scanner-helper" className="hidden" />
                   <label className="border-2 border-dashed border-white/10 hover:border-[#F5A623]/40 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all bg-white/[0.01] hover:bg-white/[0.03]">
                     <span className="text-3xl mb-2">📸</span>
                     <p className="font-serif text-base text-white">Drop or Select Product Photo</p>
                     <p className="font-sans text-xs text-zinc-500 mt-1">
-                      Upload a photo of a barcode from your phone or desktop
+                      Upload a photo of any product barcode or retail packaging
                     </p>
                     <input
                       type="file"
