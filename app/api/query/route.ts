@@ -77,14 +77,13 @@ export async function POST(req: NextRequest) {
 async function queryGroq(query: string): Promise<string> {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: process.env.GROQ_MODEL_ID || "openai/gpt-oss-120b",
         messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: query },
         ],
-        response_format: { type: "json_object" }, // Newer models support this
+        temperature: 0.1,
     });
-    // If it's a json_object, it might be wrapped in a key. Let's handle string too.
     return completion.choices[0]?.message?.content ?? "[]";
 }
 
@@ -92,26 +91,23 @@ async function queryGemini(query: string): Promise<string> {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY ?? "");
     
     try {
-        // Using the high-performance 2.5-pro for your new high-limit key
-        const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent(`${SYSTEM_PROMPT}\n\nQuery: ${query}`);
         const response = await result.response;
         return response.text();
     } catch (err: any) {
-        // High-Availability Fallback: Pivot to Groq if Gemini hits any limits or issues
-        if (err.status === 429 || err.message?.includes("429")) {
-            console.log("Gemini Rate Limited. Falling back to Groq-Llama-8b...");
-            const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-            const fallback = await groq.chat.completions.create({
-                model: "llama-3.1-8b-instant",
-                messages: [
-                    { role: "system", content: SYSTEM_PROMPT },
-                    { role: "user", content: query },
-                ],
-            });
-            return fallback.choices[0]?.message?.content ?? "[]";
-        }
-        throw err;
+        console.error("Gemini Error:", err);
+        // Fallback to Groq if Gemini hits any limits or issues
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const fallback = await groq.chat.completions.create({
+            model: process.env.GROQ_MODEL_ID || "openai/gpt-oss-120b",
+            messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: query },
+            ],
+            temperature: 0.1,
+        });
+        return fallback.choices[0]?.message?.content ?? "[]";
     }
 }
 
