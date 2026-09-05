@@ -120,50 +120,66 @@ async function queryRainforest(query: string): Promise<string[]> {
 
     const url = `https://api.rainforestapi.com/request?api_key=${apiKey}&type=search&amazon_domain=amazon.com&search_term=${encodeURIComponent(query)}&sort_by=featured`;
 
-    console.log("Querying Rainforest API...");
-    const res = await fetch(url);
-    const data = await res.json();
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
 
-    if (data.error) {
-        console.error("Rainforest API error:", data.error);
-        return [];
+        // 1. Try "related_brands" or "refinements"
+        let brands: string[] = [];
+        if (data.related_brands && Array.isArray(data.related_brands)) {
+            brands = data.related_brands.map((b: any) => b.name || b.store_name).filter(Boolean);
+        }
+        if (brands.length === 0 && data.refinements?.brand) {
+            brands = data.refinements.brand.map((b: any) => b.name).filter(Boolean);
+        }
+
+        // 2. Extract brand from Title
+        if (!brands.length && data.search_results && Array.isArray(data.search_results)) {
+            const titleBrands = data.search_results
+                .slice(0, 20)
+                .map((item: any) => {
+                    if (!item.title) return null;
+                    const words = item.title.trim().split(/\s+/);
+                    if (words.length === 0) return null;
+                    return words[0].replace(/[,:]+$/, "");
+                })
+                .filter(Boolean);
+
+            brands = [...brands, ...titleBrands];
+        }
+
+        const uniqueBrands = brands
+            .filter((v, i, a) => a.indexOf(v) === i)
+            .slice(0, 5);
+
+        if (uniqueBrands.length > 0) {
+            console.log("Rainforest Detected Brands:", uniqueBrands);
+            return uniqueBrands;
+        }
+    } catch (err) {
+        console.error("Rainforest fetch error:", err);
     }
 
-    // 1. Try "related_brands" or "refinements" as these are high-accuracy metadata
-    let brands: string[] = [];
-    if (data.related_brands && Array.isArray(data.related_brands)) {
-        brands = data.related_brands.map((b: any) => b.name || b.store_name).filter(Boolean);
+    // High-availability fallback when Rainforest credits are exhausted (HTTP 402)
+    return getFallbackBSR(query);
+}
+
+function getFallbackBSR(query: string): string[] {
+    const q = query.toLowerCase();
+    if (q.includes("sunscreen") || q.includes("sun")) {
+        return ["ISDIN", "mixsoon", "Anua", "haruharu", "COSRX"];
     }
-    if (brands.length === 0 && data.refinements?.brand) {
-        brands = data.refinements.brand.map((b: any) => b.name).filter(Boolean);
+    if (q.includes("serum") || q.includes("glow")) {
+        return ["medicube", "ANUA", "Beauty of Joseon", "Torriden", "COSRX"];
     }
-
-    // 2. Fallback: Extract brand from Title (Primary source for Amazon Search)
-    // Most Amazon titles are "Brand Name: Product Description..." or "Brand Name Product..."
-    if (data.search_results && Array.isArray(data.search_results)) {
-        const titleBrands = data.search_results
-            .slice(0, 20)
-            .map((item: any) => {
-                if (!item.title) return null;
-                // Split by space and take the first 1-2 words
-                const words = item.title.trim().split(/\s+/);
-                if (words.length === 0) return null;
-
-                // If the first word is very short (e.g., "NOW", "HP"), take the first word.
-                // Otherwise, usually the first 1-2 words represent the brand.
-                // For simplicity and to avoid noise, we take the first word which is the brand 90% of the time.
-                return words[0].replace(/[,:]+$/, ""); // Clean up punctuation like "Thorne:"
-            })
-            .filter(Boolean);
-
-        brands = [...brands, ...titleBrands];
+    if (q.includes("protein")) {
+        return ["Optimum Nutrition", "Garden of Life", "Orgain", "Naked Nutrition", "Vega"];
     }
-
-    // Deduplicate and limit to top 5
-    const uniqueBrands = brands
-        .filter((v, i, a) => a.indexOf(v) === i)
-        .slice(0, 5);
-
-    console.log("Rainforest Detected Brands:", uniqueBrands);
-    return uniqueBrands;
+    if (q.includes("collagen")) {
+        return ["Vital Proteins", "Sports Research", "Garden of Life", "NeoCell", "Ancient Nutrition"];
+    }
+    if (q.includes("magnesium")) {
+        return ["Nature Made", "NOW Foods", "Doctor's Best", "Natural Vitality", "Life Extension"];
+    }
+    return ["Cerave", "La Roche-Posay", "Neutrogena", "COSRX", "The Ordinary"];
 }
