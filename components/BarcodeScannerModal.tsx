@@ -76,74 +76,51 @@ export default function BarcodeScannerModal({
   async function startNativeCamera(cameraId?: string) {
     try {
       setErrorMessage("");
-      setScanStatus("Requesting camera access...");
+      setScanStatus("Connecting camera...");
       stopCameraStream();
 
-      // Enumerate devices
+      // Check support
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Camera API is not supported in this browser environment.");
       }
 
-      // Initial request to unlock labels
-      let initialStream: MediaStream | null = null;
-      try {
-        initialStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      } catch (err: any) {
-        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-          throw new Error("Camera permission denied. Please allow camera permissions in Chrome settings.");
-        }
-      }
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter((d) => d.kind === "videoinput");
-
-      if (initialStream) {
-        initialStream.getTracks().forEach((t) => t.stop());
-      }
-
-      if (videoDevices.length === 0) {
-        throw new Error("No physical cameras detected. Use Photo Upload or Sample Barcodes.");
-      }
-
-      const cameraList = videoDevices.map((d, i) => ({
-        id: d.deviceId,
-        label: d.label || `Camera ${i + 1}`,
-      }));
-      setAvailableCameras(cameraList);
-
-      // Prioritize Integrated Webcam over Virtual/Phone cameras
-      let targetId = cameraId || selectedCameraId;
-      if (!targetId || !cameraList.some((c) => c.id === targetId)) {
-        const integrated = cameraList.find((c) => {
-          const l = c.label.toLowerCase();
-          return (
-            (l.includes("integrated") || l.includes("built-in") || l.includes("webcam") || l.includes("hd camera")) &&
-            !l.includes("virtual") &&
-            !l.includes("nord")
-          );
-        });
-        const nonVirtual = cameraList.find((c) => {
-          const l = c.label.toLowerCase();
-          return !l.includes("virtual") && !l.includes("nord");
-        });
-        targetId = (integrated || nonVirtual || cameraList[0]).id;
-      }
-
-      setSelectedCameraId(targetId);
-
-      // Connect video stream
+      // Connect video stream using ideal constraints so it never hangs
+      const targetId = cameraId || selectedCameraId;
       const constraints: MediaStreamConstraints = {
         video: targetId
-          ? { deviceId: { exact: targetId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          ? { deviceId: { ideal: targetId } }
           : { facingMode: "user" },
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
+      // Attach immediately to video element
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(() => {});
+        };
         await videoRef.current.play().catch(() => {});
+      }
+
+      // Enumerate devices to populate camera selector with full labels
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
+        const cameraList = videoDevices.map((d, i) => ({
+          id: d.deviceId,
+          label: d.label || `Camera ${i + 1}`,
+        }));
+        setAvailableCameras(cameraList);
+
+        const activeTrack = stream.getVideoTracks()[0];
+        const activeDeviceId = activeTrack?.getSettings()?.deviceId || targetId || cameraList[0]?.id;
+        if (activeDeviceId) {
+          setSelectedCameraId(activeDeviceId);
+        }
+      } catch (enumErr) {
+        console.warn("Error enumerating devices:", enumErr);
       }
 
       setIsScanning(true);
@@ -155,9 +132,9 @@ export default function BarcodeScannerModal({
       console.warn("Camera init failed:", err);
       setIsScanning(false);
       setErrorMessage(
-        err.message?.includes("Timeout") || err.message?.includes("Could not start")
-          ? "Camera is currently busy or reserved by Windows. You can switch camera source, use Photo Upload, or click Samples!"
-          : err.message || "Failed to initialize camera."
+        err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
+          ? "Camera permission denied. Click the lock icon in Chrome to allow camera access."
+          : err.message || "Failed to initialize camera. You can switch camera, use Photo Upload, or click Samples!"
       );
     }
   }
@@ -204,7 +181,10 @@ export default function BarcodeScannerModal({
   // Switch camera dropdown
   async function handleCameraChange(newId: string) {
     setSelectedCameraId(newId);
-    await startNativeCamera(newId);
+    stopCameraStream();
+    setTimeout(() => {
+      startNativeCamera(newId);
+    }, 100);
   }
 
   // Lifecycle
