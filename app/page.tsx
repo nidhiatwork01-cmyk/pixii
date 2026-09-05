@@ -3,6 +3,9 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import LoadingSequence from "@/components/LoadingSequence";
+import BarcodeScannerModal from "@/components/BarcodeScannerModal";
+import ProductDossierModal from "@/components/ProductDossierModal";
+import { ProductDossier } from "@/app/api/barcode/route";
 
 const EXAMPLE_QUERIES = [
   "best korean sunscreen for oily skin",
@@ -16,6 +19,9 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const [currentDossier, setCurrentDossier] = useState<ProductDossier | null>(null);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -121,6 +127,15 @@ export default function HomePage() {
                 className="flex-1 bg-transparent px-2 sm:px-4 py-3 sm:py-4 font-sans text-sm sm:text-base text-white placeholder:text-zinc-700 outline-none min-w-0"
               />
               <button
+                type="button"
+                onClick={() => setIsScannerOpen(true)}
+                className="px-3 sm:px-4 py-3 sm:py-4 text-zinc-400 hover:text-white font-sans text-[10px] sm:text-xs uppercase tracking-widest rounded-xl hover:bg-white/5 transition-all flex items-center gap-1.5 shrink-0 border border-transparent hover:border-white/10 mr-1"
+                title="Scan physical product barcode"
+              >
+                <span>📷</span>
+                <span className="hidden sm:inline">Scan Barcode</span>
+              </button>
+              <button
                 onClick={() => handleSearch()}
                 disabled={isLoading || !query.trim()}
                 className="px-4 sm:px-8 py-3 sm:py-4 bg-[#F5A623] hover:bg-[#FBBF24] disabled:opacity-40 text-black font-sans text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-xl whitespace-nowrap"
@@ -193,6 +208,27 @@ export default function HomePage() {
         <span className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 text-center">© 2026 PIXII SENTINEL — AUTONOMOUS AEO AGENT · BUILT WITH STRANDS AGENTS SDK</span>
         <a href="/history" className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 hover:text-white transition-colors">Sentinel Log →</a>
       </footer>
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onDossierReady={(dossier) => {
+          setCurrentDossier(dossier);
+          setIsDossierOpen(true);
+        }}
+      />
+
+      {/* AI Product Dossier Modal */}
+      <ProductDossierModal
+        isOpen={isDossierOpen}
+        dossier={currentDossier}
+        onClose={() => setIsDossierOpen(false)}
+        onScoutCategory={(categoryQuery) => {
+          setQuery(categoryQuery);
+          handleSearch(categoryQuery);
+        }}
+      />
     </div>
   );
 }
