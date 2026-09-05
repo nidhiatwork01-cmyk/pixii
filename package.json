@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "agent:install": "pip install -r agent/requirements.txt",
+    "agent:scan": "python agent/main.py --query",
+    "agent:monitor": "python agent/main.py",
+    "agent:dry-run": "python agent/main.py --dry-run"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

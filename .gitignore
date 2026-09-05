@@ -43,3 +43,14 @@ next-env.d.ts
 
 # local docs
 DEPLOYMENT.md
+
+# Python
+/venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Agent scan data (generated at runtime, not tracked)
+/data/scans/*.json
+/data/alerts/*.jsonl
+

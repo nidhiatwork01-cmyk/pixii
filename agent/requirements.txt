@@ -1,0 +1,4 @@
+strands-agents
+strands-agents-tools
+requests
+python-dotenv

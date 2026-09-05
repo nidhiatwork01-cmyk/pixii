@@ -1,0 +1,11 @@
+{
+  "monitored_queries": [
+    "best korean sunscreen for oily skin",
+    "best korean serum for glow",
+    "organic protein powder for women",
+    "best magnesium supplement for seniors"
+  ],
+  "scan_interval_hours": 24,
+  "alert_on_blind_spots": true,
+  "alert_on_grade_drop": true
+}

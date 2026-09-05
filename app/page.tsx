@@ -149,9 +149,9 @@ export default function HomePage() {
       <section className="px-6 py-20 relative z-10 border-t border-white/5">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
-            { step: "01", title: "Scan the Engines", body: "We query Claude, Gemini, and Amazon simultaneously to reveal the new search landscape." },
-            { step: "02", title: "Detect Blind Spots", body: "Identify brands that dominate Amazon sales but are completely ignored by AI." },
-            { step: "03", title: "Optimize Visibility", body: "Get the data you need to pivot your SEO and AEO strategy for the AI era." }
+            { step: "01", title: "Autonomous Scanning", body: "The Strands Agent probes Gemini, Llama, and Amazon in the background — no human action required." },
+            { step: "02", title: "Detect Blind Spots", body: "Identifies brands dominating Amazon sales but completely invisible to AI recommendation engines." },
+            { step: "03", title: "Smart Alerts", body: "Only notifies you when action is needed — visibility drops, new competitors, or critical blind spots." }
           ].map(item => (
             <div key={item.step} className="obsidian-card p-8 group hover:border-white/20 transition-all">
               <span className="font-serif text-4xl text-zinc-800 group-hover:text-[#F5A623]/20 transition-colors">{item.step}</span>
@@ -162,9 +162,36 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Agent Status Banner */}
+      <section className="px-6 py-16 relative z-10 border-t border-white/5">
+        <div className="max-w-4xl mx-auto">
+          <div className="obsidian-card p-8 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#10B981]/50 to-transparent" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" />
+                  <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-[#10B981]">Sentinel Active</span>
+                </div>
+                <h3 className="font-serif text-2xl text-white">Pixii Sentinel Agent</h3>
+                <p className="font-sans text-sm text-zinc-500 mt-2 max-w-lg">
+                  Built with Strands Agents SDK. Autonomously monitors brand visibility across AI engines and alerts you when action is needed.
+                </p>
+              </div>
+              <a
+                href="/history"
+                className="font-sans text-[10px] font-bold uppercase tracking-widest text-[#F5A623] border border-[#F5A623]/30 hover:bg-[#F5A623]/10 px-6 py-3 rounded-xl transition-all shrink-0"
+              >
+                View Sentinel Log →
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer className="px-6 py-10 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 opacity-40">
-        <span className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 text-center">© 2024 PIXII — AI AEO SCOUT</span>
-        <a href="https://pixii.ai" className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 hover:text-white transition-colors">pixii.ai</a>
+        <span className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 text-center">© 2026 PIXII SENTINEL — AUTONOMOUS AEO AGENT · BUILT WITH STRANDS AGENTS SDK</span>
+        <a href="/history" className="font-sans text-[10px] uppercase tracking-widest text-zinc-600 hover:text-white transition-colors">Sentinel Log →</a>
       </footer>
     </div>
   );
