@@ -65,6 +65,18 @@ export default function BarcodeScannerModal({
         scannerRef.current = new Html5Qrcode(readerElementId);
       }
 
+      // Request media stream first to unlock camera labels and check availability
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          testStream.getTracks().forEach((track) => track.stop());
+        }
+      } catch (permErr: any) {
+        if (permErr.name === "NotAllowedError" || permErr.name === "PermissionDeniedError") {
+          throw new Error("Camera permission denied. Please allow camera access in Chrome or use Photo Upload / Samples.");
+        }
+      }
+
       const devices = await Html5Qrcode.getCameras();
       if (!devices || devices.length === 0) {
         throw new Error("No cameras detected on this device. You can use Photo Upload or Sample Barcodes.");
@@ -72,38 +84,56 @@ export default function BarcodeScannerModal({
 
       setAvailableCameras(devices.map(d => ({ id: d.id, label: d.label || `Camera ${d.id}` })));
 
-      // Priority: Choose integrated/built-in laptop webcam, explicitly avoiding virtual/phone cameras
+      // Filter out virtual / phone-link cameras (e.g. OnePlus Nord, OBS Virtual Cam)
+      const realCameras = devices.filter(d => {
+        const label = (d.label || "").toLowerCase();
+        return !label.includes("virtual") && !label.includes("nord");
+      });
+
+      const usablePool = realCameras.length > 0 ? realCameras : devices;
+
       let cameraId = specificCameraId || selectedCameraId;
-      if (!cameraId) {
-        const preferred = devices.find(d => {
-          const label = (d.label || "").toLowerCase();
-          return !label.includes("virtual") && !label.includes("nord") && (
-            label.includes("integrated") ||
-            label.includes("built-in") ||
-            label.includes("webcam") ||
-            label.includes("camera") ||
-            label.includes("hd")
-          );
-        }) || devices[0];
-        cameraId = preferred.id;
+      if (!cameraId || !devices.some(d => d.id === cameraId)) {
+        // Find integrated or built-in webcam
+        const integrated = usablePool.find(d => {
+          const l = (d.label || "").toLowerCase();
+          return l.includes("integrated") || l.includes("built-in") || l.includes("webcam") || l.includes("camera") || l.includes("hd");
+        }) || usablePool[0];
+        cameraId = integrated.id;
       }
 
       setSelectedCameraId(cameraId);
 
-      await scannerRef.current.start(
-        cameraId,
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 160 },
-          aspectRatio: 1.5,
-        },
-        (decodedText) => {
-          handleBarcodeDetected(decodedText);
-        },
-        () => {
-          // ignore scan frame misses
-        }
-      );
+      // Attempt start with chosen physical camera
+      try {
+        await scannerRef.current.start(
+          cameraId,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 160 },
+            aspectRatio: 1.5,
+          },
+          (decodedText) => {
+            handleBarcodeDetected(decodedText);
+          },
+          () => {}
+        );
+      } catch (firstErr) {
+        console.warn("Specific camera failed, trying generic facingMode...", firstErr);
+        // Fallback: Use generic facingMode so browser auto-selects working physical camera
+        await scannerRef.current.start(
+          { facingMode: "user" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 160 },
+            aspectRatio: 1.5,
+          },
+          (decodedText) => {
+            handleBarcodeDetected(decodedText);
+          },
+          () => {}
+        );
+      }
 
       setIsScanning(true);
       setScanStatus("Align barcode within the frame");
@@ -111,9 +141,9 @@ export default function BarcodeScannerModal({
       console.warn("Camera start failed:", err);
       setIsScanning(false);
       setErrorMessage(
-        err.message?.includes("NotAllowedError") || err.message?.includes("Permission")
-          ? "Camera permission denied. Please allow camera access in your browser, or switch camera below."
-          : (err.message || "Failed to start camera. Please try selecting another camera or use Photo Upload.")
+        err.message?.includes("Timeout") || err.message?.includes("video source")
+          ? "Camera timed out or is in use by another application. You can switch camera source, use Photo Upload, or click Samples!"
+          : (err.message || "Failed to start camera. Try Photo Upload or Sample Barcodes.")
       );
     }
   }
