@@ -49,12 +49,14 @@ export default function BarcodeScannerModal({
   const [errorMessage, setErrorMessage] = useState("");
   const [manualCode, setManualCode] = useState("");
   const [scanStatus, setScanStatus] = useState("");
+  const [availableCameras, setAvailableCameras] = useState<{ id: string; label: string }[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const readerElementId = "pixii-barcode-reader";
 
   // Start live camera
-  async function startCamera() {
+  async function startCamera(specificCameraId?: string) {
     try {
       setErrorMessage("");
       setScanStatus("Initializing camera...");
@@ -68,8 +70,25 @@ export default function BarcodeScannerModal({
         throw new Error("No cameras detected on this device. You can use Photo Upload or Sample Barcodes.");
       }
 
-      // Prefer back camera on mobile
-      const cameraId = devices[devices.length - 1].id;
+      setAvailableCameras(devices.map(d => ({ id: d.id, label: d.label || `Camera ${d.id}` })));
+
+      // Priority: Choose integrated/built-in laptop webcam, explicitly avoiding virtual/phone cameras
+      let cameraId = specificCameraId || selectedCameraId;
+      if (!cameraId) {
+        const preferred = devices.find(d => {
+          const label = (d.label || "").toLowerCase();
+          return !label.includes("virtual") && !label.includes("nord") && (
+            label.includes("integrated") ||
+            label.includes("built-in") ||
+            label.includes("webcam") ||
+            label.includes("camera") ||
+            label.includes("hd")
+          );
+        }) || devices[0];
+        cameraId = preferred.id;
+      }
+
+      setSelectedCameraId(cameraId);
 
       await scannerRef.current.start(
         cameraId,
@@ -93,10 +112,19 @@ export default function BarcodeScannerModal({
       setIsScanning(false);
       setErrorMessage(
         err.message?.includes("NotAllowedError") || err.message?.includes("Permission")
-          ? "Camera permission denied. Please allow camera access in your browser, or use Photo Upload."
-          : (err.message || "Failed to start camera. Please try Photo Upload or Sample Barcodes.")
+          ? "Camera permission denied. Please allow camera access in your browser, or switch camera below."
+          : (err.message || "Failed to start camera. Please try selecting another camera or use Photo Upload.")
       );
     }
+  }
+
+  // Switch camera
+  async function switchCamera(newId: string) {
+    await stopCamera();
+    setSelectedCameraId(newId);
+    setTimeout(() => {
+      startCamera(newId);
+    }, 150);
   }
 
   // Stop camera
@@ -253,7 +281,27 @@ export default function BarcodeScannerModal({
             <>
               {/* Camera Tab */}
               {activeTab === "camera" && (
-                <div className="space-y-4">
+                <div className="space-y-3">
+                  {/* Camera switcher dropdown */}
+                  {availableCameras.length > 1 && (
+                    <div className="flex items-center justify-between bg-white/[0.03] border border-white/10 px-3 py-2 rounded-xl">
+                      <span className="font-sans text-[10px] uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                        <span>📷</span> Camera Source:
+                      </span>
+                      <select
+                        value={selectedCameraId}
+                        onChange={(e) => switchCamera(e.target.value)}
+                        className="bg-[#111116] border border-white/10 hover:border-white/20 rounded-lg px-2.5 py-1 text-xs text-white outline-none focus:border-[#F5A623] cursor-pointer max-w-[220px] truncate"
+                      >
+                        {availableCameras.map((cam) => (
+                          <option key={cam.id} value={cam.id} className="bg-[#111116] text-white">
+                            {cam.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3] border border-white/10 flex items-center justify-center">
                     <div id={readerElementId} className="w-full h-full" />
 
